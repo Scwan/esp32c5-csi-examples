@@ -1,0 +1,75 @@
+# Weekly rebuild against MOVING ESP-IDF refs, to catch upstream drift.
+#
+# This is deliberately a separate workflow from build.yml, for two reasons.
+#
+# First, build.yml pins immutable tags - v5.5.2 and v5.5.5. Those images never
+# change, so putting a schedule on that matrix would rebuild identical inputs
+# every week and could not detect anything. Drift detection requires refs that
+# move, which is what this file uses.
+#
+# Second, the two answer different questions, and merging them would make the
+# build badge ambiguous. build.yml says "the versions this repo claims to
+# support compile". This one says "upstream has not broken us yet" - a real but
+# separate signal, and one that can legitimately go red without the repository
+# being wrong.
+#
+# What a failure means, per leg:
+#
+#   release-v5.5  A regression has landed on the branch the README recommends,
+#                 ahead of it reaching a release. This is the one to act on.
+#   release-v6.1  The README's claim that the v6 line also works no longer
+#                 holds. Fix the code or qualify the claim.
+#   latest        Whatever is newest has changed under us. The README makes no
+#                 promise about this, so it is a heads-up rather than a defect -
+#                 but it is how the next major announces itself, and the CSI
+#                 structs are exactly the kind of thing that moves between
+#                 majors.
+#
+# Note: GitHub disables scheduled workflows on public repositories after 60 days
+# with no repository activity, and emails the owner. If this stops running on a
+# quiet repo, that is why - re-enable it from the Actions tab.
+
+name: drift
+
+on:
+  schedule:
+    # Mondays, 04:41 UTC. Deliberately not on the hour: scheduled jobs queue
+    # behind everyone else's :00 cron and can be delayed by a long way.
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    name: ${{ matrix.example }} @ ${{ matrix.idf }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        idf: ["release-v5.5", "release-v6.1", "latest"]
+        example:
+          - 01_sniffer
+          - 02_espnow_pair/tx
+          - 02_espnow_pair/rx
+          - 03_router
+          - 04_motion
+          - 05_band_sweep
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: espressif/esp-idf-ci-action@v1.2.0
+        with:
+          esp_idf_version: ${{ matrix.idf }}
+          target: esp32c5
+          # Print the version first. A moving tag that breaks is only useful if
+          # the log records which actual ESP-IDF it resolved to that week.
+          command: idf.py --version && idf.py build
+          path: ${{ matrix.example }}
