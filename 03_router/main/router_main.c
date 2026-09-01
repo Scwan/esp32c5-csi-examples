@@ -124,11 +124,20 @@ static void start_pinging(void)
     cfg.data_size   = 32;
     cfg.task_prio   = 4;
 
-    /* ip_addr_set_ip4_u32() also stamps the address type, which matters when
-     * lwip is built dual-stack and is a silent no-op when it is not. */
+    /*
+     * Note the _val suffix. The pointer form, ip_addr_set_ip4_u32(&target, ..),
+     * expands to a null check on its argument, and ESP-IDF builds with
+     * -Werror=address, so testing the address of a local is a hard error:
+     *
+     *   error: the address of 'target' will always evaluate as 'true'
+     *
+     * lwip provides the _val form for exactly this case. It takes the object
+     * rather than a pointer, has no null check in either the IPv4-only or the
+     * dual-stack build, and still stamps the address type where that matters.
+     */
     ip_addr_t target;
     memset(&target, 0, sizeof(target));
-    ip_addr_set_ip4_u32(&target, ip.gw.addr);
+    ip_addr_set_ip4_u32_val(target, ip.gw.addr);
     cfg.target_addr = target;
 
     const esp_ping_callbacks_t cbs = {

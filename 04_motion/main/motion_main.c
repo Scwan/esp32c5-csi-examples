@@ -124,9 +124,11 @@ static void start_pinging(void)
     cfg.data_size   = 32;
     cfg.task_prio   = 4;
 
+    /* _val, not the pointer form: that one null-checks its argument, and
+     * -Werror=address rejects testing the address of a local. See 03_router. */
     ip_addr_t target;
     memset(&target, 0, sizeof(target));
-    ip_addr_set_ip4_u32(&target, ip.gw.addr);
+    ip_addr_set_ip4_u32_val(target, ip.gw.addr);
     cfg.target_addr = target;
 
     ESP_ERROR_CHECK(esp_ping_new_session(&cfg, NULL, &s_ping));
