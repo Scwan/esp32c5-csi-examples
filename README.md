@@ -1,5 +1,7 @@
 # Wi-Fi CSI examples for the ESP32-C5 (ESP-IDF)
 
+[![build](https://github.com/Scwan/esp32c5-csi-examples/actions/workflows/build.yml/badge.svg)](https://github.com/Scwan/esp32c5-csi-examples/actions/workflows/build.yml)
+
 Five ESP-IDF projects that capture Channel State Information on an ESP32-C5,
 plus one shared component that hides the parts of the API that are specific to
 this chip.
@@ -182,10 +184,24 @@ In roughly the order worth checking:
 ## Accuracy
 
 Every API fact in this tree was read from ESP-IDF `release/v5.5` sources rather
-than from memory, because there is no ESP-IDF on the machine this was written on
-and therefore nothing here has been compiled. Specifically unverified: whether
-it builds and runs. The sources consulted are listed at the end of
+than from memory, because there is no ESP-IDF on the machine it was written on.
+The sources consulted are listed at the end of
 [NOTES-C5-vs-C6.md](NOTES-C5-vs-C6.md).
+
+**It builds.** CI compiles all six projects for `esp32c5` against ESP-IDF
+v5.5.2 and v5.5.5 on every push. Two things follow that are worth more than a
+green tick:
+
+- Since `csi_c5.h` has an `#error` on `!CONFIG_ESP_WIFI_CSI_ENABLED`, a passing
+  build proves `sdkconfig.defaults` actually took effect — the failure mode that
+  is otherwise completely silent at runtime.
+- The v5.5.2 leg passing confirms `esp32c5` is genuinely a supported, non-preview
+  target there, which is the version floor claimed above.
+
+**It has never been run.** No part of this has met a radio. Compiling is not
+evidence that the CSI parsing is right, that the record shapes match the tables,
+or that any example produces data. Treat the numbers in the sample output as
+illustrative, not as recordings.
 
 One field is genuinely undocumented upstream: `val_scale_cfg`. ESP-IDF states
 its range (0–8 on the C5, 0–3 on the C6) and nothing else — not what the values
