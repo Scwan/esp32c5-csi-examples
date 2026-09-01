@@ -1,0 +1,92 @@
+menu "CSI motion detector configuration"
+
+    config CSI_MOTION_SSID
+        string "Access point SSID"
+        default "myssid"
+
+    config CSI_MOTION_PASSWORD
+        string "Access point password"
+        default "mypassword"
+
+    config CSI_MOTION_INTERVAL_MS
+        int "Milliseconds between pings"
+        range 5 1000
+        default 20
+        help
+            Also sets the CSI rate, and therefore what the detector can see. A
+            person walking takes a few hundred milliseconds to cross a link, so
+            20 ms (50 records per second) gives plenty of samples per event.
+
+    config CSI_MOTION_CALIBRATION_RECORDS
+        int "Records to average into the baseline before watching"
+        range 20 2000
+        default 250
+        help
+            At the default 20 ms interval, 250 records is about five seconds.
+            Stay out of the path between the board and the AP for that long
+            after boot, or you calibrate your own presence into the baseline and
+            the detector then reports motion when you leave.
+
+    config CSI_MOTION_THRESHOLD_PERCENT
+        int "Motion threshold, percent mean deviation"
+        range 1 200
+        default 15
+        help
+            The score is the mean relative change in per-sub-carrier amplitude
+            against the baseline, so 15 means "on average 15 percent away from
+            what the room looked like when still".
+
+            This number is not portable. It depends on the distance between the
+            board and the AP, on what is in the room, and on the band. Watch the
+            MOTION lines with the room empty and with someone walking through,
+            then set it between the two.
+
+    config CSI_MOTION_HOLD_MS
+        int "Minimum milliseconds to hold the motion state"
+        range 0 10000
+        default 1500
+        help
+            Stops one person crossing the link from being reported as a rapid
+            series of separate events.
+
+    config CSI_MOTION_FORCE_LLTF
+        bool "Report L-LTF instead of HT/VHT/HE-LTF"
+        default n
+        help
+            Leave this at n unless you have a specific reason.
+
+            The obvious argument for y is stable record shape: traffic from a
+            real AP arrives in whatever PHY its rate control picked, so record
+            length keeps moving between 490, 234, 114 and 106 bytes, and the
+            detector can only compare sub-carrier k against baseline
+            sub-carrier k when k means the same frequency every time.
+
+            The argument against is stronger. On the C5, forcing L-LTF also
+            switches the buffer to 12-bit packing - four bytes per tone instead
+            of two - which is undocumented and is the single most common way to
+            get silently wrong CSI on this chip. The shared component decodes
+            both correctly, so it is safe either way here, but Espressif's own
+            recommendation for human sensing is to leave it off:
+
+              "234 subcarriers are sufficient to capture human body state
+               features [...] 8-bit precision is completely adequate for
+               detecting sitting/standing/walking"
+
+            The detector does not need a globally fixed shape anyway - records
+            whose shape does not match the baseline are counted and discarded
+            rather than compared, and the summary reports them as "wrong-shape".
+            If that count is high, the cheaper fix is to pin the link (an
+            11n 40 MHz connection gives a steady 234) rather than to force
+            L-LTF.
+
+    config CSI_MOTION_VAL_SCALE
+        int "CSI value scaling (val_scale_cfg)"
+        range 0 8
+        default 0
+        help
+            Scales the reported I/Q values; ESP-IDF documents only the range,
+            0-8 on the C5. Because the detector works on relative change against
+            its own baseline, a change here mostly rescales the score, so if you
+            do change it, re-tune the threshold too.
+
+endmenu

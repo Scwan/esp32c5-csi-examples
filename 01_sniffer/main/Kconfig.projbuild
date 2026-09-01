@@ -1,0 +1,80 @@
+menu "CSI sniffer configuration"
+
+    config CSI_SNIFFER_CHANNEL
+        int "Channel to park on"
+        range 1 177
+        default 36
+        help
+            2.4 GHz: 1-14.
+            5 GHz:   36-64, 100-144, 149-177, in steps of 4.
+
+            36 is the default because it is a non-DFS 5 GHz channel that most
+            dual-band APs use out of the box, and 5 GHz is the reason to pick a
+            C5 over a C6 in the first place. Use 1 or 6 or 11 if the traffic you
+            care about is on 2.4 GHz.
+
+            Channels 52-144 are DFS. A C5 in promiscuous mode only listens, so
+            receiving there is fine, but many APs avoid them and you may see no
+            traffic at all.
+
+    config CSI_SNIFFER_PRINT_CSV
+        bool "Print one CSV line per record"
+        default y
+        help
+            Turn this off to keep only the periodic summary. Useful when you
+            want to check that CSI is flowing without drowning the console.
+
+    config CSI_SNIFFER_DUMP_ACK
+        bool "Also produce CSI for received 802.11 ACK frames"
+        default y
+        help
+            ACKs are short, frequent and sent at a legacy rate, which makes them
+            a dense and very regular CSI source. This maps to the dump_ack_en
+            field of wifi_csi_acquire_config_t.
+
+    config CSI_SNIFFER_FORCE_LLTF
+        bool "Report L-LTF instead of HT/VHT/HE-LTF"
+        default n
+        help
+            This maps to acquire_csi_force_lltf. On the C5 an HT/VHT/HE frame
+            carries two LTF sequences and you get exactly one of them - and the
+            choice silently changes the buffer format as well:
+
+              n (default) - HT/VHT/HE-LTF. 8-bit int8 pairs, two bytes per tone.
+                            245 tones in a 490-byte record for an HE20 frame,
+                            the most frequency resolution available.
+              y           - L-LTF only, always 106 bytes, the same shape no
+                            matter which PHY the frame used. But L-LTF defaults
+                            to 12-BIT packing on this chip: four bytes per tone,
+                            26 tones, not 53.
+
+            The 12-bit behaviour is undocumented - ESP-IDF's CSI page still says
+            two bytes per sub-carrier - and reading it as int8 pairs produces
+            data that "parses cleanly and plots plausibly" while being wrong.
+            The shared component decodes both and tags each record in the
+            "packing" CSV column.
+
+    config CSI_SNIFFER_VAL_SCALE
+        int "CSI value scaling (val_scale_cfg)"
+        range 0 8
+        default 0
+        help
+            Scales the reported I/Q values. The C5 accepts 0-8; the C6 field is
+            only two bits wide and stops at 3.
+
+            ESP-IDF documents nothing about this field except its range - not
+            what the values mean, and not whether 0 is special. So treat it
+            empirically: leave it at 0, look at the printed values, and only
+            change it if they clip at +/-127 or sit down in the noise.
+
+    config CSI_SNIFFER_QUEUE_LEN
+        int "CSI records buffered between the Wi-Fi task and the printer"
+        range 4 64
+        default 16
+        help
+            Each slot is roughly 600 bytes. Raise it if the summary line reports
+            drops, lower it if you are short of RAM. Records are dropped rather
+            than blocking, because blocking in the CSI callback stalls the whole
+            Wi-Fi stack.
+
+endmenu

@@ -1,0 +1,76 @@
+menu "CSI from a router configuration"
+
+    config CSI_ROUTER_SSID
+        string "Access point SSID"
+        default "myssid"
+
+    config CSI_ROUTER_PASSWORD
+        string "Access point password"
+        default "mypassword"
+        help
+            Leave empty for an open network.
+
+    choice CSI_ROUTER_BAND
+        prompt "Band to use"
+        default CSI_ROUTER_BAND_AUTO
+        help
+            The C5 can associate on either band. Pinning it is the only way to
+            be sure which one you measured when the AP advertises the same SSID
+            on both - and measuring a 5 GHz link is the reason to use a C5 here
+            rather than any other Espressif part.
+
+        config CSI_ROUTER_BAND_AUTO
+            bool "Either (WIFI_BAND_MODE_AUTO)"
+        config CSI_ROUTER_BAND_5G_ONLY
+            bool "5 GHz only"
+        config CSI_ROUTER_BAND_2G_ONLY
+            bool "2.4 GHz only"
+    endchoice
+
+    config CSI_ROUTER_INTERVAL_MS
+        int "Milliseconds between pings"
+        range 5 5000
+        default 20
+        help
+            Sets the CSI rate: roughly one echo reply, and so one CSI record,
+            per ping. 20 ms gives about 50 records per second.
+
+            esp_ping schedules with vTaskDelayUntil() at this interval, so with
+            the project's CONFIG_FREERTOS_HZ=1000 anything down to a few
+            milliseconds is honoured. The real floor is the round-trip time: if
+            the gateway takes longer than the interval to answer, the rate drops
+            to whatever the link sustains.
+
+    config CSI_ROUTER_PRINT_CSV
+        bool "Print one CSV line per record"
+        default y
+
+    config CSI_ROUTER_FORCE_LLTF
+        bool "Report L-LTF instead of HT/VHT/HE-LTF"
+        default n
+        help
+            Say y to see the other buffer format. On the C5 this does two
+            things, not one:
+
+              n - HT/VHT/HE-LTF, 8-bit int8 pairs, two bytes per tone. Record
+                  length follows whatever PHY the AP's rate control picked:
+                  490 for HE20, 234 for HT40, 114 for HT20.
+              y - L-LTF only, always 106 bytes - but in 12-bit packing, which is
+                  FOUR bytes per tone and yields 26 tones, not 53.
+
+            That second effect is undocumented: ESP-IDF's CSI page still says
+            two bytes per sub-carrier for every case on this chip. The shared
+            component decodes both and labels each record in the "packing" CSV
+            column, so it is safe to toggle here - but any external tool you
+            feed the CSV to has to respect that column.
+
+    config CSI_ROUTER_VAL_SCALE
+        int "CSI value scaling (val_scale_cfg)"
+        range 0 8
+        default 0
+        help
+            Scales the reported I/Q values. ESP-IDF documents only the range,
+            0-8 on the C5. Leave it at 0 unless the printed values clip at
+            +/-127 or sit in the noise.
+
+endmenu

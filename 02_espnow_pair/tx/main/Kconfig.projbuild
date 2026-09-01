@@ -1,0 +1,46 @@
+menu "CSI transmitter configuration"
+
+    config CSI_TX_CHANNEL
+        int "Channel to transmit on"
+        range 1 177
+        default 36
+        help
+            Must match CSI_RX_CHANNEL on the receiver board exactly. ESP-NOW
+            refuses to send when the peer channel and the radio channel disagree
+            (ESP_ERR_ESPNOW_CHAN).
+
+            2.4 GHz: 1-14. 5 GHz: 36-64, 100-144, 149-177 in steps of 4.
+
+    config CSI_TX_INTERVAL_MS
+        int "Milliseconds between frames"
+        range 5 5000
+        default 20
+        help
+            20 ms gives 50 CSI records per second, which is a reasonable rate for
+            watching a person move through the link. Go down to 10 ms for gesture
+            work; below that the console becomes the bottleneck before the radio
+            does.
+
+    config CSI_TX_PAYLOAD_PAD
+        int "Extra payload bytes"
+        range 1 200
+        default 24
+        help
+            CSI is estimated from the preamble, so payload length does not change
+            what is measured. A little payload just makes the frames easier to
+            spot in a sniffer trace. The minimum is 1 rather than 0 because a
+            zero-length array member is a compiler extension, not standard C.
+
+    config CSI_TX_PHY_HE20
+        bool "Transmit as 802.11ax HE20 instead of legacy"
+        default y
+        help
+            y - HE20 MCS0. The receiver gets HE-LTF CSI: 245 sub-carriers in a
+                490 byte record. This is the C5 showing off what a Wi-Fi 6 radio
+                measures, and it is the highest frequency resolution available.
+
+            n - legacy 6 Mbps (11g on 2.4 GHz, 11a on 5 GHz). The receiver gets
+                L-LTF CSI: 52 sub-carriers in a 106 byte record. Smaller, and
+                directly comparable with CSI captured from older ESP32 chips.
+
+endmenu

@@ -1,0 +1,55 @@
+menu "CSI receiver configuration"
+
+    config CSI_RX_CHANNEL
+        int "Channel to listen on"
+        range 1 177
+        default 36
+        help
+            Must match CSI_TX_CHANNEL on the transmitter board exactly.
+
+    config CSI_RX_FILTER_MAC
+        string "Only report CSI from this transmitter MAC"
+        default "00:00:00:00:00:00"
+        help
+            Format aa:bb:cc:dd:ee:ff. The transmitter prints its own address at
+            boot; paste it here.
+
+            Leave it all zeros to report CSI from every transmitter on the
+            channel, which is what you want when you are still checking that
+            anything arrives at all.
+
+    config CSI_RX_PRINT_CSV
+        bool "Print the full CSV line per record"
+        default y
+        help
+            Turn this off to keep only the one-line AMP summary, which is far
+            easier to read while you are physically moving around the room.
+
+    config CSI_RX_FORCE_LLTF
+        bool "Report L-LTF instead of HT/VHT/HE-LTF"
+        default n
+        help
+            Maps to acquire_csi_force_lltf. Say n for the full HE-LTF
+            resolution the C5 is capable of - 8-bit int8 pairs, two bytes per
+            tone, 245 tones for an HE20 frame.
+
+            Say y for L-LTF: always a 106-byte record whatever the transmitter
+            used. Note that L-LTF on the C5 defaults to 12-bit packing, which is
+            four bytes per tone and 26 tones - undocumented, and the usual cause
+            of silently wrong CSI on this chip. The shared component handles it
+            and reports which format each record used in the "packing" column.
+
+            In this example the transmitter's PHY is pinned anyway, so record
+            shape is already stable and there is little reason to force L-LTF.
+
+    config CSI_RX_VAL_SCALE
+        int "CSI value scaling (val_scale_cfg)"
+        range 0 8
+        default 0
+        help
+            Scales the reported I/Q values. ESP-IDF documents only the range,
+            0-8 on the C5, so this is a knob to sweep rather than one to reason
+            about. Start at 0 and change it only if the AMP figures clip or
+            vanish into the noise.
+
+endmenu

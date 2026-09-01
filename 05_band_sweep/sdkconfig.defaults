@@ -1,0 +1,15 @@
+# Target. Equivalent to running: idf.py set-target esp32c5
+CONFIG_IDF_TARGET="esp32c5"
+
+# Mandatory for every CSI project. Without it the CSI code is compiled out of
+# the Wi-Fi driver, WIFI_INIT_CONFIG_DEFAULT() leaves csi_enable at 0, and the
+# callback simply never fires - with no error anywhere to tell you why.
+CONFIG_ESP_WIFI_CSI_ENABLED=y
+
+# CSI is a firehose. One HE20 record is 490 bytes and its CSV line is about
+# 2 kB. At 115200 baud you lose most of them to the UART.
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=921600
+
+# The CSI callback runs in the Wi-Fi task and must return fast. A 1 kHz tick
+# keeps the consumer task responsive enough to drain the queue.
+CONFIG_FREERTOS_HZ=1000

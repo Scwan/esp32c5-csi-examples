@@ -1,0 +1,29 @@
+menu "CSI band sweep configuration"
+
+    choice CSI_SWEEP_BAND
+        prompt "Bands to sweep"
+        default CSI_SWEEP_BAND_BOTH
+
+        config CSI_SWEEP_BAND_BOTH
+            bool "Both (2.4 GHz then 5 GHz)"
+        config CSI_SWEEP_BAND_24
+            bool "2.4 GHz only"
+        config CSI_SWEEP_BAND_5
+            bool "5 GHz only"
+    endchoice
+
+    config CSI_SWEEP_DWELL_MS
+        int "Milliseconds to dwell on each channel"
+        range 100 10000
+        default 800
+        help
+            The sweep is passive: it counts what other people transmit, so a
+            short dwell on a quiet channel proves nothing. 800 ms across 32
+            channels is roughly a 26 second pass.
+
+            Raise it to 2000 or more if you are trying to establish that a
+            channel really is empty rather than merely quiet at that moment.
+            Beacons alone arrive about every 100 ms per AP, so anything above a
+            few hundred milliseconds will find an AP if one is there.
+
+endmenu
