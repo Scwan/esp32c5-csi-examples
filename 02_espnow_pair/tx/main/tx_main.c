@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026
+ * SPDX-FileCopyrightText: 2026 scwan
  * SPDX-License-Identifier: Apache-2.0
  *
  * 02_espnow_pair / tx - the transmitter half.

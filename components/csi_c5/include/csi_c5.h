@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026
+ * SPDX-FileCopyrightText: 2026 scwan
  * SPDX-License-Identifier: Apache-2.0
  *
  * csi_c5 - shared helpers for the ESP32-C5 Wi-Fi CSI examples.
