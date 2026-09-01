@@ -1,0 +1,17 @@
+# Store every text file with LF, and check it out with LF too, overriding
+# core.autocrlf on Windows.
+#
+# The second half of that is the point. Git already normalises to LF on commit,
+# so the repository was never the problem; the working copy was. This tree was
+# written on Windows, where anything opening a file in text mode turns "\n" into
+# CRLF on the way out, which left some files CRLF and others LF.
+#
+# That is not merely untidy. A pattern anchored with "foo$" does not match a
+# line ending "foo\r", so a search-and-replace across the tree silently skipped
+# the CRLF files - and the grep written to verify it skipped exactly the same
+# ones, for exactly the same reason, and reported success. Pinning the checkout
+# to LF removes the whole class.
+#
+# ESP-IDF builds on Linux and macOS as well, so LF is the right stored form
+# regardless.
+* text=auto eol=lf
