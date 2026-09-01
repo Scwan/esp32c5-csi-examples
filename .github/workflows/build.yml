@@ -1,0 +1,63 @@
+# Builds every example for the ESP32-C5, against the oldest ESP-IDF this tree
+# claims to support and against the newest of that line.
+#
+# What a green run proves:
+#
+#   - The code compiles for esp32c5. That was the one thing the README could not
+#     assert, because there is no ESP-IDF on the machine it was written on.
+#   - CSI is actually enabled. components/csi_c5/include/csi_c5.h has an #error
+#     on !CONFIG_ESP_WIFI_CSI_ENABLED, so a build that links at all is proof
+#     that sdkconfig.defaults took effect - the failure mode that is otherwise
+#     completely silent at runtime.
+#   - v5.5.2 really is the floor the README claims. If esp32c5 were still a
+#     preview target there, the v5.5.2 leg would fail and the newer one pass.
+#
+# What it does not prove: that any of it works on hardware. Nothing here
+# transmits, receives, or sees a radio.
+
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.example }} @ ${{ matrix.idf }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Every example is built even when one fails. Which ones break is the
+      # information worth having; stopping at the first hides it.
+      fail-fast: false
+      matrix:
+        # v5.5.2 is the documented minimum (esp32c5 is a preview target before
+        # it); v5.5.5 is the current bugfix release of that line.
+        idf: ["v5.5.2", "v5.5.5"]
+        example:
+          - 01_sniffer
+          - 02_espnow_pair/tx
+          - 02_espnow_pair/rx
+          - 03_router
+          - 04_motion
+          - 05_band_sweep
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned to the v1.2.0 tag rather than @v1, which is a mutable branch in
+      # this action's repository and not a tag at all.
+      - uses: espressif/esp-idf-ci-action@v1.2.0
+        with:
+          esp_idf_version: ${{ matrix.idf }}
+          target: esp32c5
+          path: ${{ matrix.example }}
