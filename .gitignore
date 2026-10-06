@@ -11,3 +11,6 @@ sdkconfig.old
 # idf_component_manager
 managed_components/
 dependencies.lock
+/claude-skills
+/claude-memory
+/claude-docs
